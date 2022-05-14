@@ -1,5 +1,12 @@
 # syscall-digest
 
+This is a prototype of a program that:
+
+1. Reads the list of processes from procfs and stores a SHA-256 digest of each executable
+2. Attaches an eBPF KProbe program to `sys_execve` to capture the PID and executable of newly instantiated processes
+3. Attaches an eBPF Raw Tracepoint program to capture the ID and PID of all syscalls made on the system and sends these events to userspace
+4. Processes the events from eBPF and logs the Syscall ID, PID, and the filename and digest of the executable to stdout.
+
 ## Prerequisites
 
 1. Install a rust stable toolchain: `rustup install stable`
