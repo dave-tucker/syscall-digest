@@ -1,0 +1,22 @@
+[package]
+name = "syscall-digest"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+aya = { git = "https://github.com/aya-rs/aya", branch = "main" }
+aya-log = "0.1"
+syscall-digest-common = { path = "../syscall-digest-common", features=["user"] }
+anyhow = "1.0.42"
+clap = { version = "3.1", features = ["derive"] }
+log = "0.4"
+simplelog = "0.12"
+tokio = { version = "1.18", features = ["full"] }
+bytes = "1"
+sha256 = "1"
+procfs = "0.12.0"
+
+[[bin]]
+name = "syscall-digest"
+path = "src/main.rs"
