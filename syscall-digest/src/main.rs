@@ -1,19 +1,18 @@
-use std::collections::HashMap;
-use std::ffi::CString;
-use std::path::PathBuf;
+use std::{collections::HashMap, ffi::CString, path::PathBuf};
 
-use aya::maps::perf::AsyncPerfEventArray;
-use aya::maps::{HashMap as BpfHashMap, MapRefMut};
-use aya::programs::{KProbe, RawTracePoint};
-use aya::util::online_cpus;
-use aya::{include_bytes_aligned, Bpf};
+use aya::{
+    include_bytes_aligned,
+    maps::{perf::AsyncPerfEventArray, HashMap as BpfHashMap, MapRefMut},
+    programs::{KProbe, RawTracePoint},
+    util::online_cpus,
+    Bpf,
+};
 use bytes::BytesMut;
 use clap::Parser;
 use log::info;
 use simplelog::{ColorChoice, ConfigBuilder, LevelFilter, TermLogger, TerminalMode};
 use syscall_digest_common::{Filename, SyscallLog};
-use tokio::sync::mpsc;
-use tokio::{signal, task};
+use tokio::{signal, sync::mpsc, task};
 
 #[derive(Debug, Parser)]
 struct Opt {}

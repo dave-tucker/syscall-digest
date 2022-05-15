@@ -1,9 +1,10 @@
-use aya_gen::btf_types;
 use std::{
     fs::File,
     io::Write,
     path::{Path, PathBuf},
 };
+
+use aya_gen::btf_types;
 
 pub fn generate() -> Result<(), anyhow::Error> {
     let dir = PathBuf::from("syscall-digest-ebpf/src");
