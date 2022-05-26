@@ -1,9 +1,10 @@
 #![no_std]
 #![no_main]
 
+use core::slice;
+
 use aya_bpf::{
     bindings::pt_regs,
-    cty::c_int,
     helpers::*,
     macros::{kprobe, map, raw_tracepoint},
     maps::{HashMap, PerfEventArray},
@@ -31,9 +32,8 @@ pub fn log_syscall(ctx: RawTracePointContext) -> u32 {
 }
 
 unsafe fn try_log_syscall(ctx: RawTracePointContext) -> Result<u32, u32> {
-    let pt_regs: *mut pt_regs = ctx.as_ptr() as *mut _;
-    let syscall_addr: *const c_int = (*pt_regs).rdi().map(|v| v as _).unwrap();
-    let syscall: c_int = bpf_probe_read_user(syscall_addr).map_err(|e| e as u32)?;
+    let args = slice::from_raw_parts(ctx.as_ptr() as *const usize, 2);
+    let syscall = args[1] as u64;
     let pid = ctx.pid();
     let log_entry = SyscallLog {
         pid,
