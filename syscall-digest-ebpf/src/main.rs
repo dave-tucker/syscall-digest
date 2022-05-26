@@ -4,12 +4,11 @@
 use core::slice;
 
 use aya_bpf::{
-    bindings::pt_regs,
     helpers::*,
     macros::{kprobe, map, raw_tracepoint},
     maps::{HashMap, PerfEventArray},
     programs::{ProbeContext, RawTracePointContext},
-    BpfContext,
+    BpfContext, PtRegs,
 };
 
 use syscall_digest_common::{Filename, SyscallLog};
@@ -57,8 +56,8 @@ unsafe fn try_log_pid(ctx: ProbeContext) -> Result<u32, u32> {
     let pid = ctx.pid();
 
     if PIDS.get(&pid).is_none() {
-        let pt_regs: *mut pt_regs = ctx.arg(0).unwrap();
-        let filename_addr: *const u8 = (*pt_regs).rdi().map(|v| v as _).unwrap();
+        let regs = PtRegs::new(ctx.arg(0).unwrap());
+        let filename_addr: *const u8 = regs.arg(0).unwrap();
 
         let mut buf = [0u8; 127];
         let filename_len = bpf_probe_read_user_str(filename_addr as *const u8, &mut buf)
