@@ -1,4 +1,11 @@
-use std::{collections::HashMap, ffi::CString, path::PathBuf};
+use std::{
+    collections::HashMap,
+    ffi::CString,
+    fs,
+    io::{self, Write},
+    path::Path,
+    process::Command,
+};
 
 use aya::{
     include_bytes_aligned,
@@ -9,7 +16,8 @@ use aya::{
 };
 use bytes::BytesMut;
 use clap::Parser;
-use log::info;
+use log::{error, info};
+use regex::Regex;
 use simplelog::{ColorChoice, ConfigBuilder, LevelFilter, TermLogger, TerminalMode};
 use syscall_digest_common::{Filename, SyscallLog};
 use tokio::{signal, sync::mpsc, task};
@@ -59,6 +67,21 @@ async fn main() -> Result<(), anyhow::Error> {
     let mut pid_map: BpfHashMap<MapRefMut, u32, Filename> =
         BpfHashMap::try_from(bpf.map_mut("PIDS").unwrap()).unwrap();
 
+    info!("Building Syscall Name Database");
+    let mut syscalls = HashMap::new();
+    let output = Command::new("ausyscall").arg("--dump").output()?;
+    println!("status: {}", output.status);
+    io::stdout().write_all(&output.stdout).unwrap();
+    io::stderr().write_all(&output.stderr).unwrap();
+    let pattern = Regex::new(r"([0-9]+)\t(.*)")?;
+    String::from_utf8(output.stdout)?
+        .lines()
+        .filter_map(|line| pattern.captures(line))
+        .map(|cap| (cap[1].parse::<u32>().unwrap(), cap[2].trim().to_string()))
+        .for_each(|(k, v)| {
+            syscalls.insert(k, v);
+        });
+
     info!("Building Process Digest Map From /proc");
     let mut digests: HashMap<u32, String> = HashMap::new();
     for prc in procfs::process::all_processes().unwrap() {
@@ -89,20 +112,39 @@ async fn main() -> Result<(), anyhow::Error> {
                 };
 
                 if digests.contains_key(&pid) {
-                    info!("{}", filename);
                     let digest = digests.get(&pid).unwrap();
                     info!(
                         "got = syscall: {} pid: {} filename: {} digest: {}",
-                        syscall, pid, filename, digest
+                        syscalls.get(&syscall).unwrap_or(&syscall.to_string()),
+                        pid,
+                        filename,
+                        digest
                     );
                 } else {
-                    info!("{}", filename);
-                    let digest = sha256::digest_file(PathBuf::from(filename)).unwrap();
-                    digests.insert(pid, digest.clone());
-                    info!(
-                        "got = syscall: {} pid: {} filename: {} digest: {}",
-                        syscall, pid, filename, digest
-                    );
+                    let path = Path::new(filename);
+                    if path.exists() {
+                        let meta = fs::metadata(path).unwrap();
+                        if meta.len() < 10240 {
+                            let digest = sha256::digest_file(path).unwrap();
+                            digests.insert(pid, digest.clone());
+                            info!(
+                                "got = syscall: {} pid: {} filename: {} digest: {}",
+                                syscalls.get(&syscall).unwrap_or(&syscall.to_string()),
+                                pid,
+                                filename,
+                                digest
+                            );
+                        } else {
+                            info!(
+                                "got = syscall: {} pid: {} filename: {} digest: ETOOBIG",
+                                syscalls.get(&syscall).unwrap_or(&syscall.to_string()),
+                                pid,
+                                filename
+                            );
+                        }
+                    } else {
+                        error!("path {} is not valid", filename);
+                    }
                 };
             }
         }

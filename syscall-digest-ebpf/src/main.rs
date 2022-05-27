@@ -10,7 +10,6 @@ use aya_bpf::{
     programs::{ProbeContext, RawTracePointContext},
     BpfContext, PtRegs,
 };
-
 use syscall_digest_common::{Filename, SyscallLog};
 
 #[map(name = "EVENTS")]
