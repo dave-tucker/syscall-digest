@@ -124,7 +124,7 @@ async fn main() -> Result<(), anyhow::Error> {
                     let path = Path::new(filename);
                     if path.exists() {
                         let meta = fs::metadata(path).unwrap();
-                        if meta.len() < 10240 {
+                        if meta.len() < 10240000 {
                             let digest = sha256::digest_file(path).unwrap();
                             digests.insert(pid, digest.clone());
                             info!(
